@@ -70,7 +70,9 @@ h2{font-size:19px}
 input[type=date],input[type=number],input[type=text],select{
   font:inherit;font-family:var(--f-mono);font-size:14px;color:var(--ink);background:var(--surface-2);
   border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-height:38px;width:100%;min-width:0}
+input[type=text]{font-variant-numeric:tabular-nums}
 input[readonly]{background:transparent;border-style:dashed}
+input.bad{border-color:var(--bad)}
 input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;align-self:flex-start}
 .seg label{position:relative;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer;background:var(--surface-2);font-weight:500}
@@ -167,8 +169,8 @@ textarea#copyOut{width:100%;min-height:90px;font-family:var(--f-mono);font-size:
   <section class="panel">
     <div class="head"><h2>Account</h2></div>
     <div class="fields">
-      <div class="field"><label for="dob">Girl's date of birth</label><input type="date" id="dob" value="2022-03-10"></div>
-      <div class="field"><label for="opening">Account opening date</label><input type="date" id="opening" value="2022-04-01" min="2014-12-03"><span class="hint" id="openAge"></span></div>
+      <div class="field"><label for="dob">Girl's date of birth</label><input type="text" class="dmy" id="dob" value="10-03-2022" inputmode="numeric" placeholder="DD-MM-YYYY" maxlength="10" autocomplete="off"></div>
+      <div class="field"><label for="opening">Account opening date</label><input type="text" class="dmy" id="opening" value="01-04-2022" inputmode="numeric" placeholder="DD-MM-YYYY" maxlength="10" autocomplete="off"><span class="hint" id="openAge"></span></div>
       <div class="field"><label for="years">Contribution duration (years)</label><input type="number" id="years" value="15" min="1" max="15" step="1" inputmode="numeric"><span class="hint">Up to 15 years from opening</span></div>
       <div class="field"><label for="depEnd">Contributions allowed until</label><input type="text" id="depEnd" readonly><span class="hint">Last day to deposit</span></div>
       <div class="field"><label for="matDate">Maturity date</label><input type="text" id="matDate" readonly><span class="hint">21 years from opening</span></div>
@@ -360,7 +362,22 @@ const $ = id => document.getElementById(id);
 const S = {mode:'yearly', rows:{}, extras:[], changes:[], openYears:new Set()};
 const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
 const num2 = n => n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtDate = o => o.d + ' ' + MON[o.m-1] + ' ' + o.y;
+const fmtDate = o => pad2(o.d) + '-' + pad2(o.m) + '-' + o.y;            // DD-MM-YYYY
+const toDMY = iso => { const o = parseISO(iso); return o ? fmtDate(o) : ''; };
+function fromDMY(s){
+  const t = /^\s*(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})\s*$/.exec(s || '');
+  if (!t) return '';
+  const iso = t[3] + '-' + pad2(+t[2]) + '-' + pad2(+t[1]);
+  return parseISO(iso) ? iso : '';
+}
+function dmyMask(el){                                                       // type digits, dashes are added
+  let v = el.value;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) v = toDMY(v);                        // a pasted ISO date
+  const d = v.replace(/\D/g, '').slice(0, 8);
+  const out = d.slice(0, 2) + (d.length > 2 ? '-' + d.slice(2, 4) : '') + (d.length > 4 ? '-' + d.slice(4) : '');
+  if (out !== el.value) el.value = out;
+  el.classList.toggle('bad', out.length === 10 && !fromDMY(out));
+}
 const fyLabel = fy => fy + '–' + pad2((fy+1)%100);
 const baseRate = () => { const f = parseFloat($('futureRate').value); return isFinite(f) ? Math.min(Math.max(f,0),15) : 0; };
 function words(n){
@@ -383,7 +400,7 @@ function rateOf(y, m){
   return r;
 }
 function getAccount(){
-  const open = parseISO($('opening').value), dob = parseISO($('dob').value);
+  const open = parseISO(fromDMY($('opening').value)), dob = parseISO(fromDMY($('dob').value));
   const raw = Number($('years').value);
   let years = Math.round(raw);
   if (!(years >= 1)) years = 1;
@@ -448,7 +465,7 @@ function renderRows(a){
       '<td><input type="number" min="0" step="50" inputmode="numeric" id="amt' + fy + '" data-fy="' + fy + '" data-f="amount" value="' + r.amount + '" aria-label="Amount for ' + fyLabel(fy) + '"></td>' +
       '<td>' + (monthly
         ? '<input type="number" min="1" max="31" step="1" id="day' + fy + '" data-fy="' + fy + '" data-f="day" value="' + r.day + '" aria-label="Day of month for ' + fyLabel(fy) + '">'
-        : '<input type="date" id="dt' + fy + '" data-fy="' + fy + '" data-f="date" value="' + r.date + '" aria-label="Deposit date for ' + fyLabel(fy) + '">') + '</td>' +
+        : '<input type="text" class="dmy" id="dt' + fy + '" data-fy="' + fy + '" data-f="date" value="' + toDMY(r.date) + '" inputmode="numeric" placeholder="DD-MM-YYYY" maxlength="10" autocomplete="off" aria-label="Deposit date for ' + fyLabel(fy) + ' (DD-MM-YYYY)">') + '</td>' +
       '<td class="st" data-st="fy' + fy + '"></td></tr>';
   }
   $('rowsBody').innerHTML = h;
@@ -456,7 +473,7 @@ function renderRows(a){
 function renderExtras(){
   $('extraWrap').hidden = S.extras.length === 0;
   $('extraBody').innerHTML = S.extras.map((x,i) =>
-    '<tr><td><input type="date" id="xd' + i + '" data-i="' + i + '" data-f="date" value="' + x.date + '" aria-label="Extra deposit date"></td>' +
+    '<tr><td><input type="text" class="dmy" id="xd' + i + '" data-i="' + i + '" data-f="date" value="' + toDMY(x.date) + '" inputmode="numeric" placeholder="DD-MM-YYYY" maxlength="10" autocomplete="off" aria-label="Extra deposit date (DD-MM-YYYY)"></td>' +
     '<td><input type="number" min="0" step="50" inputmode="numeric" id="xa' + i + '" data-i="' + i + '" data-f="amount" value="' + x.amount + '" aria-label="Extra deposit amount"></td>' +
     '<td class="st" data-st="x' + i + '"></td>' +
     '<td><button type="button" class="btn small" data-rm="' + i + '">Remove</button></td></tr>').join('');
@@ -614,7 +631,7 @@ function renderLedger(res){
   $('btnExpand').textContent = S.openYears.size >= res.ledger.length ? 'Hide all months' : 'Show all months';
   $('ledgerFoot').innerHTML = '<tr><td>Total</td><td></td><td></td><td class="num">' + inr(res.totDep) + '</td><td class="num">' + inr(res.totInt) + '</td><td class="num">' + inr(res.maturity) + '</td><td></td><td></td></tr>';
   lastTSV = ['Financial year\tRate %\tOpening balance\tDeposits\tInterest credited\tClosing balance\tCredited on']
-    .concat(res.ledger.map(e => [fyLabel(e.fy), e.rates.join(' > '), e.open, e.deposits, e.interest, e.close, e.creditOn ? isoOf(e.creditOn) : isoOf(res.mat)].join('\t')))
+    .concat(res.ledger.map(e => [fyLabel(e.fy), e.rates.join(' > '), e.open, e.deposits, e.interest, e.close, e.creditOn ? fmtDate(e.creditOn) : fmtDate(res.mat)].join('\t')))
     .concat([['Total','','',res.totDep,res.totInt,res.maturity,''].join('\t')]).join('\n');
 }
 function monthRows(res, fy){
@@ -711,13 +728,13 @@ $('enforce').addEventListener('change', recalc);
 $('cap').addEventListener('change', syncAll);
 $('rowsBody').addEventListener('input', e => {
   const t = e.target, fy = t.dataset.fy; if (!fy) return;
-  S.rows[fy][t.dataset.f] = t.value; S.rows[fy].edited = true; recalc();
+  S.rows[fy][t.dataset.f] = t.dataset.f === 'date' ? fromDMY(t.value) : t.value; S.rows[fy].edited = true; recalc();
 });
 $('btnExtra').addEventListener('click', () => {
   const a = getAccount(); if (!a.open) return;
   S.extras.push({date: isoOf(a.open), amount: 50000}); $('extraDet').open = true; renderExtras(); recalc();
 });
-$('extraBody').addEventListener('input', e => { const t = e.target; if (t.dataset.i == null) return; S.extras[t.dataset.i][t.dataset.f] = t.value; recalc(); });
+$('extraBody').addEventListener('input', e => { const t = e.target; if (t.dataset.i == null) return; S.extras[t.dataset.i][t.dataset.f] = t.dataset.f === 'date' ? fromDMY(t.value) : t.value; recalc(); });
 $('extraBody').addEventListener('click', e => { const i = e.target.dataset.rm; if (i == null) return; S.extras.splice(+i, 1); renderExtras(); recalc(); });
 $('futureRate').addEventListener('input', recalc);
 $('btnChange').addEventListener('click', () => {
@@ -757,6 +774,7 @@ $('btnCopy').addEventListener('click', () => {
     navigator.clipboard.writeText(lastTSV).then(() => { b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy table', 1500); box.hidden = true; }, fallback);
   } catch (err) { fallback(); }
 });
+document.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('dmy')) dmyMask(e.target); }, true);
 hint(); syncAll();
 </script>
 </body>
