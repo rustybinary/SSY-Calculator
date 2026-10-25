@@ -82,6 +82,14 @@ check('deposits after the contribution period are refused', () => {
   assert.strictEqual(r.rejected[0].reason, 'after the contribution period');
 });
 
+check('a flat rate across every quarter (7% and 7.5%)', () => {
+  const d = []; for (let y = 2022; y < 2037; y++) d.push([y + '-04-01', 150000]);
+  const a = run('2022-04-01', 15, d, {rateOf: () => 7});
+  assert.deepStrictEqual([a.totDep, a.totInt, a.maturity], [2250000, 3802759, 6052759]);
+  const b = run('2022-04-01', 15, d, {rateOf: () => 7.5});
+  assert.deepStrictEqual([b.totDep, b.totInt, b.maturity], [2250000, 4249748, 6499748]);
+});
+
 check('XIRR matches an independent solver', () => {
   const r = run('2026-04-01', 15, [['2026-04-01', 100000]]);
   const x = xirr([{date: r.ok[0].date, amount: -100000}, {date: r.mat, amount: r.maturity}]);
