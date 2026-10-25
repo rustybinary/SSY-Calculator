@@ -10,7 +10,7 @@ No build step, no dependencies, no tracking. Open `index.html` in a browser.
 
 - **Scheme-accurate interest.** Each calendar month earns interest on the lowest balance held between the close of the 5th and the end of the month, at that month's quarterly rate divided by 12. Interest is credited on 31 March each year, rounded to the nearest rupee, and compounds annually.
 - **Notified rates built in.** Quarterly rates from December 2014 to December 2026 are hardcoded. Only the quarters inside the account's own period are shown.
-- **Your own rates for the future.** Set one assumed rate for quarters not yet announced, then add expected rate changes ("from Jan–Mar 2029 the rate is 7%").
+- **Your own rates.** Choose between two modes. *Notified rates, then my assumption* uses the real rates up to the latest notification, then one assumed rate plus any expected rate changes ("from Jan–Mar 2029 the rate is 7%"). *One flat rate for everything* applies a single average rate such as 7% or 7.5% to every quarter, for what-if runs. Only the controls for the chosen mode are shown, and your expected changes are kept if you switch back.
 - **Flexible deposits.** Once a year or every month, a default amount and date, per-year overrides, and extra one-off deposits on any date. The ₹1,50,000 yearly limit and the 15-year deposit window are applied, with switches for the edge cases.
 - **Results.** Total deposited, total interest earned, total maturity amount, XIRR, net ROI, maturity date, a hoverable growth chart, and a year-by-year ledger where each year expands to its monthly workings.
 - **Inputs.** Girl's date of birth, account opening date, contribution duration (up to 15 years), deposit amounts and dates.

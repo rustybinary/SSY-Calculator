@@ -139,7 +139,7 @@ svg.chart .r-link{stroke:var(--line);stroke-width:1.5}
 .fine{font-size:13px;color:var(--muted);margin:0;max-width:75ch}
 .fine + .fine{margin-top:8px}
 textarea#copyOut{width:100%;min-height:90px;font-family:var(--f-mono);font-size:12px;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
-@media (max-width:560px){ .panel{padding:16px} .chg{grid-template-columns:1fr 1fr auto} .chg > span{display:none} }
+@media (max-width:560px){ .seg{flex-wrap:wrap} .panel{padding:16px} .chg{grid-template-columns:1fr 1fr auto} .chg > span{display:none} }
 @media (prefers-reduced-motion:no-preference){ .btn{transition:border-color .15s} }
 </style>
 </head>
@@ -221,6 +221,14 @@ textarea#copyOut{width:100%;min-height:90px;font-family:var(--f-mono);font-size:
 
   <section class="panel">
     <div class="head"><h2>Interest rates for this account</h2></div>
+    <div class="seg" role="radiogroup" aria-label="How to set the interest rate">
+      <label><input type="radio" name="ratemode" id="rmNotified" value="notified" checked><span>Notified rates, then my assumption</span></label>
+      <label><input type="radio" name="ratemode" id="rmFlat" value="flat"><span>One flat rate for everything</span></label>
+    </div>
+    <div id="flatBox" hidden>
+      <div class="fields"><div class="field"><label for="flatRate">Flat rate for every quarter (% a year)</label><input type="number" id="flatRate" value="7.5" min="0" max="15" step="0.01" inputmode="decimal"><span class="hint">Replaces the notified rates too, so use it for an average-rate what-if.</span></div></div>
+      <div class="row-actions" style="margin-top:10px"><span class="hint">Quick picks</span><button type="button" class="btn small" data-flat="7">7%</button><button type="button" class="btn small" data-flat="7.5">7.5%</button><button type="button" class="btn small" data-flat="8">8%</button><button type="button" class="btn small" data-flat="8.2">8.2%</button></div>
+    </div>
     <p class="ratesum" id="rateSummary"></p>
     <div class="chartbox"><svg class="chart" id="rateChart"></svg></div>
     <div id="assumeBox">
@@ -359,7 +367,7 @@ function xirr(flows){
 
 /* ---------------- interface ---------------- */
 const $ = id => document.getElementById(id);
-const S = {mode:'yearly', rows:{}, extras:[], changes:[], openYears:new Set()};
+const S = {mode:'yearly', rateMode:'notified', rows:{}, extras:[], changes:[], openYears:new Set()};
 const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
 const num2 = n => n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtDate = o => pad2(o.d) + '-' + pad2(o.m) + '-' + o.y;            // DD-MM-YYYY
@@ -391,7 +399,9 @@ function ageText(from, to){
   if (m < 0) { y--; m += 12; }
   return y + 'y ' + m + 'm';
 }
+const flatBase = () => { const f = parseFloat($('flatRate').value); return isFinite(f) ? Math.min(Math.max(f,0),15) : 0; };
 function rateOf(y, m){
+  if (S.rateMode === 'flat') return flatBase();
   const q = qIdx(y, m);
   if (HIST[q] != null) return HIST[q];
   if (q < HIST_FIRST_Q) return HIST[HIST_FIRST_Q];
@@ -482,6 +492,7 @@ function renderExtras(){
 /* ---- rates: summary, step chart, expected changes ---- */
 function renderChanges(a){
   if (!a.open) { $('assumeBox').hidden = true; return; }
+  if (S.rateMode === 'flat') { $('assumeBox').hidden = true; return; }     // keep S.changes so switching back restores them
   const {qs, qe} = span(a), fs = Math.max(HIST_LAST_Q + 1, qs);
   if (fs > qe) { $('assumeBox').hidden = true; S.changes = []; return; }
   $('assumeBox').hidden = false;
@@ -497,13 +508,17 @@ function renderRateChart(a){
   const svg = $('rateChart');
   if (!a.open) { svg.innerHTML = ''; $('rateSummary').textContent = ''; return; }
   const {qs, qe} = span(a), list = [];
-  for (let q = qs; q <= qe; q++) list.push({q, rate:rateOf(Math.floor(q/4), (q%4)*3 + 1), official:q <= HIST_LAST_Q});
+  for (let q = qs; q <= qe; q++) list.push({q, rate:rateOf(Math.floor(q/4), (q%4)*3 + 1), official:q <= HIST_LAST_Q && S.rateMode !== 'flat'});
   const n1 = list.filter(x => x.official).length, n2 = list.length - n1;
   const first = list[0], lastOff = list.filter(x => x.official).pop();
   let t;
   if (n1 === 0) t = 'None of this account\'s ' + list.length + ' quarters have a notified rate yet, so every rate comes from your assumption below.';
   else if (n2 === 0) t = 'All ' + n1 + ' quarters are already notified: ' + first.rate.toFixed(1) + '% at opening' + (n1 > 1 ? ', ' + lastOff.rate.toFixed(1) + '% in the last one' : '') + '.';
   else t = n1 + (n1 === 1 ? ' quarter is' : ' quarters are') + ' already notified (' + first.rate.toFixed(1) + '% at opening' + (n1 > 1 ? ', ' + lastOff.rate.toFixed(1) + '% now' : '') + '). The other ' + n2 + ' use your assumption.';
+  if (S.rateMode === 'flat') {
+    const k = list.filter(x => x.q <= HIST_LAST_Q).length;
+    t = 'Every quarter of this account uses ' + flatBase() + '%' + (k ? ', in place of the ' + k + (k === 1 ? ' quarter' : ' quarters') + ' already notified' : '') + '.';
+  }
   $('rateSummary').textContent = t;
 
   const W = 720, H = 172, L = 44, R = 12, T = 30, B = 26, iw = W - L - R, ih = H - T - B;
@@ -531,7 +546,7 @@ function renderRateChart(a){
     const bx = X(n1);
     s += '<line class="vl" x1="' + bx + '" x2="' + bx + '" y1="' + (T-4) + '" y2="' + (T+ih) + '"/><text class="mk" x="' + (bx-6) + '" y="' + (T-12) + '" text-anchor="end">Notified</text><text class="mk" x="' + (bx+6) + '" y="' + (T-12) + '">Your assumption</text>';
   } else if (n1) s += '<text class="mk" x="' + L + '" y="' + (T-12) + '">Notified rates</text>';
-  else s += '<text class="mk" x="' + L + '" y="' + (T-12) + '">Your assumption</text>';
+  else s += '<text class="mk" x="' + L + '" y="' + (T-12) + '">' + (S.rateMode === 'flat' ? 'Your flat rate' : 'Your assumption') + '</text>';
   s += '</svg>';
   svg.outerHTML = s.replace('<svg ', '<svg class="chart" id="rateChart" role="img" aria-label="Interest rate by quarter over the life of the account" ');
 }
@@ -775,6 +790,12 @@ $('btnCopy').addEventListener('click', () => {
   } catch (err) { fallback(); }
 });
 document.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('dmy')) dmyMask(e.target); }, true);
+document.querySelectorAll('input[name=ratemode]').forEach(r => r.addEventListener('change', () => {
+  S.rateMode = r.value; $('flatBox').hidden = S.rateMode !== 'flat';
+  renderChanges(getAccount()); recalc();
+}));
+$('flatRate').addEventListener('input', recalc);
+document.querySelectorAll('[data-flat]').forEach(b => b.addEventListener('click', () => { $('flatRate').value = b.dataset.flat; recalc(); }));
 hint(); syncAll();
 </script>
 </body>
