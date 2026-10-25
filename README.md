@@ -12,7 +12,7 @@ No build step, no dependencies, no tracking. Open `index.html` in a browser.
 - **Notified rates built in.** Quarterly rates from December 2014 to December 2026 are hardcoded. Only the quarters inside the account's own period are shown.
 - **Your own rates for the future.** Set one assumed rate for quarters not yet announced, then add expected rate changes ("from Jan–Mar 2029 the rate is 7%").
 - **Flexible deposits.** Once a year or every month, a default amount and date, per-year overrides, and extra one-off deposits on any date. The ₹1,50,000 yearly limit and the 15-year deposit window are applied, with switches for the edge cases.
-- **Results.** Maturity value, total deposited, total interest, XIRR, net ROI, maturity date, a hoverable growth chart, and a year-by-year ledger where each year expands to its monthly workings.
+- **Results.** Total deposited, total interest earned, total maturity amount, XIRR, net ROI, maturity date, a hoverable growth chart, and a year-by-year ledger where each year expands to its monthly workings.
 - **Inputs.** Girl's date of birth, account opening date, contribution duration (up to 15 years), deposit amounts and dates.
 
 ## Run it

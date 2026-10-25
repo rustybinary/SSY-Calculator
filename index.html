@@ -51,7 +51,7 @@ h2{font-size:19px}
 .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
 .stat.main{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.stat .k{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;opacity:.8;white-space:nowrap}
 .stat .v{font-family:var(--f-mono);font-weight:500;font-size:clamp(19px,2.3vw,22px);margin-top:2px;overflow-wrap:anywhere}
 .stat .s{font-size:12.5px;opacity:.9;margin-top:2px}
 .stat:not(.main) .k,.stat:not(.main) .s{color:var(--muted);opacity:1}
@@ -152,9 +152,9 @@ textarea#copyOut{width:100%;min-height:90px;font-family:var(--f-mono);font-size:
   </header>
 
   <section class="strip" aria-live="polite">
-    <div class="stat main"><div class="k">Maturity value</div><div class="v" id="sMat">–</div><div class="s" id="sMatS"></div></div>
     <div class="stat"><div class="k">Total deposited</div><div class="v" id="sDep">–</div><div class="s" id="sDepS"></div></div>
     <div class="stat"><div class="k">Total interest earned</div><div class="v" id="sInt">–</div><div class="s" id="sIntS"></div></div>
+    <div class="stat main"><div class="k">Total maturity amount</div><div class="v" id="sMat">–</div><div class="s" id="sMatS"></div></div>
     <div class="stat" title="XIRR is the yearly return worked out on the actual deposit dates. Net ROI is the total gain divided by the total deposited."><div class="k">Return (XIRR)</div><div class="v" id="sXirr">–</div><div class="s" id="sXirrS"></div></div>
     <div class="stat"><div class="k">Maturity date</div><div class="v" id="sDate">–</div><div class="s" id="sDateS"></div></div>
   </section>
@@ -252,7 +252,7 @@ textarea#copyOut{width:100%;min-height:90px;font-family:var(--f-mono);font-size:
   <section class="panel">
     <div class="head"><h2>How the numbers are worked out</h2></div>
     <p class="fine">Each calendar month earns interest on the lowest balance held between the close of the 5th and the end of the month, at that month's quarterly rate divided by 12. A deposit made on or before the 5th earns for that month; a later one starts the next month. Interest is added to the account on 31 March each year, rounded to the nearest rupee, so it earns interest from the following April.</p>
-    <p class="fine">XIRR is the yearly rate that turns your dated deposits into the maturity value, using actual days over 365, the same as Excel's XIRR. A deposit made part-way through a year earns simple interest until 31 March, and one made after the 5th loses that month, so XIRR can sit slightly below the quoted rate. Net ROI is the total gain divided by the total deposited, with no allowance for how long the money was held.</p>
+    <p class="fine">XIRR is the yearly rate that turns your dated deposits into the maturity amount, using actual days over 365, the same as Excel's XIRR. A deposit made part-way through a year earns simple interest until 31 March, and one made after the 5th loses that month, so XIRR can sit slightly below the quoted rate. Net ROI is the total gain divided by the total deposited, with no allowance for how long the money was held.</p>
     <p class="fine">Interest runs for whole calendar months from the opening month up to the month before the maturity month. Any interest still uncredited at maturity is added then. Notified rates are hardcoded from December 2014 through December 2026. Not modelled: withdrawals, premature closure, penalties for a missed year, and post-maturity interest. Banks and post offices can differ by a few rupees in rounding, so check your passbook for the final figure.</p>
   </section>
 </div>
@@ -698,7 +698,7 @@ function recalc(){
   $('sDep').textContent = inr(res.totDep);
   $('sDepS').textContent = res.ok.length + ' deposit' + (res.ok.length === 1 ? '' : 's') + ' over ' + a.years + ' year' + (a.years === 1 ? '' : 's');
   $('sInt').textContent = inr(res.totInt);
-  $('sIntS').textContent = res.maturity ? (res.totInt / res.maturity * 100).toFixed(1) + '% of the maturity value' : '';
+  $('sIntS').textContent = res.maturity ? (res.totInt / res.maturity * 100).toFixed(1) + '% of the maturity amount' : '';
   const flows = res.ok.map(x => ({date:x.date, amount:-x.amount})).concat([{date:mat, amount:res.maturity}]);
   const xr = res.totDep > 0 ? xirr(flows) : null;
   $('sXirr').textContent = xr == null ? '–' : (xr * 100).toFixed(2) + '%';
