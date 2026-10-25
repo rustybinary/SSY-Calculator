@@ -36,7 +36,7 @@ node tests/core.test.js
 1. Push this folder to a GitHub repository.
 2. In the repository, open **Settings → Pages**.
 3. Under **Build and deployment**, choose **Deploy from a branch**, pick `main` and `/ (root)`, and save.
-4. The page is served at `https://<your-username>.github.io/<repository-name>/`. The path is case-sensitive, so it must match the repository name exactly.
+4. The page is served at `https://rustybinary.github.io/SSY-Calculator/`. The path is case-sensitive, so it must match the repository name exactly.
 
 ## Updating the rates
 
