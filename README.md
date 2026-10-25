@@ -2,6 +2,8 @@
 
 A single-page calculator for India's **Sukanya Samriddhi Yojana** (SSY) savings scheme. It follows the scheme's own interest rules, so the maturity figure can be checked against a passbook.
 
+**Live:** <https://rustybinary.github.io/SSY-Calculator/>
+
 No build step, no dependencies, no tracking. Open `index.html` in a browser.
 
 ## What it does
@@ -10,7 +12,7 @@ No build step, no dependencies, no tracking. Open `index.html` in a browser.
 - **Notified rates built in.** Quarterly rates from December 2014 to December 2026 are hardcoded. Only the quarters inside the account's own period are shown.
 - **Your own rates for the future.** Set one assumed rate for quarters not yet announced, then add expected rate changes ("from Jan–Mar 2029 the rate is 7%").
 - **Flexible deposits.** Once a year or every month, a default amount and date, per-year overrides, and extra one-off deposits on any date. The ₹1,50,000 yearly limit and the 15-year deposit window are applied, with switches for the edge cases.
-- **Results.** Maturity value, total deposited, total interest, XIRR, net ROI, maturity date, a hoverable growth chart, a year-by-year ledger, and a month-by-month workings table.
+- **Results.** Maturity value, total deposited, total interest, XIRR, net ROI, maturity date, a hoverable growth chart, and a year-by-year ledger where each year expands to its monthly workings.
 - **Inputs.** Girl's date of birth, account opening date, contribution duration (up to 15 years), deposit amounts and dates.
 
 ## Run it
@@ -34,7 +36,7 @@ node tests/core.test.js
 1. Push this folder to a GitHub repository.
 2. In the repository, open **Settings → Pages**.
 3. Under **Build and deployment**, choose **Deploy from a branch**, pick `main` and `/ (root)`, and save.
-4. The page is served at `https://rustybinary.github.io/SSY-Calculator/`.
+4. The page is served at `https://<your-username>.github.io/<repository-name>/`. The path is case-sensitive, so it must match the repository name exactly.
 
 ## Updating the rates
 

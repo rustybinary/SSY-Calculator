@@ -96,6 +96,11 @@ td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:ta
 td input{min-height:32px;padding:5px 8px;width:100%;min-width:110px}
 tfoot td{font-weight:600;background:var(--surface-2);border-top:1px solid var(--line)}
 tr.idle td{color:var(--muted)}
+.tg{font:inherit;font-size:13px;background:none;border:0;color:var(--accent);cursor:pointer;padding:2px 8px 2px 0;min-width:22px}
+tr.mrow > td{padding:0;background:var(--surface-2)}
+.mtable{width:100%;font-size:13px}
+.mtable th{background:transparent;padding:7px 12px}
+.mtable td{padding:5px 12px}
 .badge{display:inline-block;font-size:11.5px;border-radius:99px;padding:1px 8px;margin-left:6px;background:var(--warn-bg);color:var(--warn);white-space:nowrap}
 .badge.bad{background:var(--bad-bg);color:var(--bad)}
 .st{font-family:var(--f-mono);font-size:13px;white-space:nowrap}
@@ -228,7 +233,7 @@ textarea#copyOut{width:100%;min-height:90px;font-family:var(--f-mono);font-size:
   </section>
 
   <section class="panel">
-    <div class="head"><h2>Year by year</h2><div class="row-actions"><button type="button" class="btn small" id="btnCopy">Copy table</button></div></div>
+    <div class="head"><h2>Year by year</h2><div class="row-actions"><button type="button" class="btn small" id="btnExpand">Show all months</button><button type="button" class="btn small" id="btnCopy">Copy table</button></div></div>
     <details class="sec" id="ledgerDet" open>
       <summary>Show the ledger<small id="ledgerCount"></small></summary>
       <div class="tablewrap">
@@ -241,17 +246,6 @@ textarea#copyOut{width:100%;min-height:90px;font-family:var(--f-mono);font-size:
       <textarea id="copyOut" hidden readonly aria-label="Table text to copy"></textarea>
     </details>
   </section>
-
-  <details class="panel" id="monthly">
-    <summary style="font-weight:600;font-size:15px;cursor:pointer">Month-by-month workings</summary>
-    <p class="sub" style="margin:10px 0">Every month's lowest balance and interest, so you can check the figures against a passbook. Interest is shown to the paisa; the yearly credit is rounded to the nearest rupee.</p>
-    <div class="tablewrap scroll">
-      <table>
-        <thead><tr><th>Month</th><th class="num">Rate (%)</th><th class="num">Lowest balance</th><th class="num">Deposited</th><th class="num">Interest for month</th><th class="num">Credited</th></tr></thead>
-        <tbody id="monthBody"></tbody>
-      </table>
-    </div>
-  </details>
 
   <section class="panel">
     <div class="head"><h2>How the numbers are worked out</h2></div>
@@ -363,7 +357,7 @@ function xirr(flows){
 
 /* ---------------- interface ---------------- */
 const $ = id => document.getElementById(id);
-const S = {mode:'yearly', rows:{}, extras:[], changes:[]};
+const S = {mode:'yearly', rows:{}, extras:[], changes:[], openYears:new Set()};
 const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
 const num2 = n => n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtDate = o => o.d + ' ' + MON[o.m-1] + ' ' + o.y;
@@ -610,19 +604,21 @@ function renderLedger(res){
     const rt = e.rates.map(r => r.toFixed(r*10 % 1 ? 2 : 1)).join(' → ');
     const part = (k === 0 || k === last) && e.months < 12 ? ' <span class="part">' + e.months + ' mo</span>' : '';
     const on = e.creditOn ? fmtDate(e.creditOn) : 'at maturity, ' + fmtDate(res.mat);
-    h += '<tr' + (e.deposits ? '' : ' class="idle"') + '><td class="st">' + fyLabel(e.fy) + part + '</td><td class="num">' + rt + '</td><td class="num">' + inr(e.open) + '</td><td class="num">' + (e.deposits ? inr(e.deposits) : '–') +
+    const isOpen = S.openYears.has(e.fy);
+    h += '<tr' + (e.deposits ? '' : ' class="idle"') + '><td class="st"><button type="button" class="tg" data-fy="' + e.fy + '" aria-expanded="' + isOpen + '" aria-label="' + (isOpen ? 'Hide' : 'Show') + ' the months of ' + fyLabel(e.fy) + '">' + (isOpen ? '▾' : '▸') + '</button>' + fyLabel(e.fy) + part + '</td><td class="num">' + rt + '</td><td class="num">' + inr(e.open) + '</td><td class="num">' + (e.deposits ? inr(e.deposits) : '–') +
       '</td><td class="num">' + inr(e.interest) + '</td><td class="num">' + inr(e.close) + '</td><td class="st"><span class="mini"><i style="width:' + share + '%"></i></span>' + share + '%</td><td class="st">' + on + '</td></tr>';
+    if (isOpen) h += '<tr class="mrow"><td colspan="8"><table class="mtable"><thead><tr><th>Month</th><th class="num">Rate (%)</th><th class="num">Lowest balance</th><th class="num">Deposited</th><th class="num">Interest for month</th><th class="num">Credited</th></tr></thead><tbody>' + monthRows(res, e.fy) + '</tbody></table></td></tr>';
   });
   $('ledgerBody').innerHTML = h;
-  $('ledgerCount').textContent = res.ledger.length + ' financial years';
+  $('ledgerCount').textContent = res.ledger.length + ' financial years · use ▸ to see a year’s months';
+  $('btnExpand').textContent = S.openYears.size >= res.ledger.length ? 'Hide all months' : 'Show all months';
   $('ledgerFoot').innerHTML = '<tr><td>Total</td><td></td><td></td><td class="num">' + inr(res.totDep) + '</td><td class="num">' + inr(res.totInt) + '</td><td class="num">' + inr(res.maturity) + '</td><td></td><td></td></tr>';
   lastTSV = ['Financial year\tRate %\tOpening balance\tDeposits\tInterest credited\tClosing balance\tCredited on']
     .concat(res.ledger.map(e => [fyLabel(e.fy), e.rates.join(' > '), e.open, e.deposits, e.interest, e.close, e.creditOn ? isoOf(e.creditOn) : isoOf(res.mat)].join('\t')))
     .concat([['Total','','',res.totDep,res.totInt,res.maturity,''].join('\t')]).join('\n');
 }
-function renderMonthly(res){
-  if (!$('monthly').open || !res) return;
-  $('monthBody').innerHTML = res.months.map(r =>
+function monthRows(res, fy){
+  return res.months.filter(r => (r.m >= 4 ? r.y : r.y - 1) === fy).map(r =>
     '<tr><td class="st">' + MON[r.m-1] + ' ' + r.y + '</td><td class="num">' + r.rate.toFixed(2) + '</td><td class="num">' + inr(r.minBal) +
     '</td><td class="num">' + (r.deposits ? inr(r.deposits) : '–') + '</td><td class="num">' + num2(r.interest) + '</td><td class="num">' + (r.credited ? inr(r.credited) : '') + '</td></tr>').join('');
 }
@@ -632,7 +628,7 @@ function blank(msg){
   ['sMat','sDep','sInt','sXirr','sDate'].forEach(i => $(i).textContent = '–');
   ['sMatS','sDepS','sIntS','sXirrS','sDateS'].forEach(i => $(i).textContent = '');
   $('notes').innerHTML = '<div class="note bad">' + msg + '</div>';
-  $('ledgerBody').innerHTML = ''; $('ledgerFoot').innerHTML = ''; $('monthBody').innerHTML = '';
+  $('ledgerBody').innerHTML = ''; $('ledgerFoot').innerHTML = '';
   $('depEnd').value = ''; $('matDate').value = ''; $('openAge').textContent = '';
   $('hero').innerHTML = ''; $('rateChart').innerHTML = ''; $('rateSummary').textContent = ''; heroData = null;
 }
@@ -693,7 +689,7 @@ function recalc(){
   $('sDate').textContent = fmtDate(mat);
   $('sDateS').textContent = a.dob ? 'She will be ' + ageText(a.dob, mat) : '';
   $('notes').innerHTML = notes.map(([c, t]) => '<div class="note ' + c + '">' + t + '</div>').join('');
-  renderLedger(res); renderHero(res, a); renderRateChart(a); renderMonthly(res);
+  renderLedger(res); renderHero(res, a); renderRateChart(a);
 }
 function syncAll(){
   const a = getAccount();
@@ -741,7 +737,16 @@ $('changeBody').addEventListener('change', e => {
   S.changes[i].q = +t.value; renderChanges(getAccount()); recalc();
 });
 $('changeBody').addEventListener('click', e => { const i = e.target.dataset.rm; if (i == null) return; S.changes.splice(+i, 1); renderChanges(getAccount()); recalc(); });
-$('monthly').addEventListener('toggle', () => renderMonthly(lastRes));
+$('ledgerBody').addEventListener('click', e => {
+  const b = e.target.closest('button[data-fy]'); if (!b || !lastRes) return;
+  const fy = +b.dataset.fy; S.openYears.has(fy) ? S.openYears.delete(fy) : S.openYears.add(fy);
+  renderLedger(lastRes);
+});
+$('btnExpand').addEventListener('click', () => {
+  if (!lastRes) return;
+  if (S.openYears.size >= lastRes.ledger.length) S.openYears.clear(); else lastRes.ledger.forEach(e => S.openYears.add(e.fy));
+  renderLedger(lastRes);
+});
 $('heroBox').addEventListener('pointermove', heroMove);
 $('heroBox').addEventListener('pointerleave', heroLeave);
 $('btnCopy').addEventListener('click', () => {
